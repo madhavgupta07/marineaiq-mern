@@ -5,3 +5,5 @@ server/.env
 server/data/db.json
 *.log
 .DS_Store
+
+.vercel
