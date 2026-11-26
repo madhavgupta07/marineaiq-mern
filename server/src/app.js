@@ -9,6 +9,10 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/error.js';
 import routes from './routes/index.js';
+import { store } from './store.js';
+
+// server.js does this for local runs; Vercel imports app.js directly.
+if (process.env.VERCEL) await store.init();
 
 const app = express();
 app.set('trust proxy', 1);

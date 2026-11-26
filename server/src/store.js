@@ -20,6 +20,7 @@ const fileUrl = pathToFileURL(filePath);
 const collections = { users: User, prompts: Prompt, leads: Lead, orders: Order };
 
 let mode = 'file';
+let initialized = false;
 let db = { users: [], prompts: [], leads: [], orders: [] };
 
 const now = () => new Date().toISOString();
@@ -139,6 +140,9 @@ async function seedDefaults() {
 
 export const store = {
   async init() {
+    if (initialized) return;
+    initialized = true;
+
     if (env.mongoUri) {
       await mongoose.connect(env.mongoUri, {
         maxPoolSize: 20,
