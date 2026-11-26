@@ -20,7 +20,7 @@ const fileUrl = pathToFileURL(filePath);
 const collections = { users: User, prompts: Prompt, leads: Lead, orders: Order };
 
 let mode = 'file';
-let initialized = false;
+let initPromise = null;
 let db = { users: [], prompts: [], leads: [], orders: [] };
 
 const now = () => new Date().toISOString();
@@ -140,27 +140,32 @@ async function seedDefaults() {
 
 export const store = {
   async init() {
-    if (initialized) return;
-    initialized = true;
-
-    if (env.mongoUri) {
-      await mongoose.connect(env.mongoUri, {
-        maxPoolSize: 20,
-        minPoolSize: 2,
-        serverSelectionTimeoutMS: 5000,
+    if (!initPromise) {
+      initPromise = (async () => {
+        if (env.mongoUri) {
+          await mongoose.connect(env.mongoUri, {
+            maxPoolSize: 20,
+            minPoolSize: 2,
+            serverSelectionTimeoutMS: 5000,
+          });
+          mode = 'mongo';
+          console.log('[db] Connected to MongoDB');
+        } else {
+          readFileDb();
+          mode = 'file';
+          console.log(
+            `[db] No MONGO_URI set — using JSON store (${
+              isServerless ? 'ephemeral temp directory' : 'server/data/db.json'
+            })`,
+          );
+        }
+        await seedDefaults();
+      })().catch((error) => {
+        initPromise = null; // allow a retry after a failed connection
+        throw error;
       });
-      mode = 'mongo';
-      console.log('[db] Connected to MongoDB');
-    } else {
-      readFileDb();
-      mode = 'file';
-      console.log(
-        `[db] No MONGO_URI set — using JSON store (${
-          isServerless ? 'ephemeral temp directory' : 'server/data/db.json'
-        })`,
-      );
     }
-    await seedDefaults();
+    return initPromise;
   },
   close() {
     return mongoose.connection.close();
